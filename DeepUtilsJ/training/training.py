@@ -73,8 +73,8 @@ def train_model(model, loss_func, metric_func, optimizer, train_loader, valid_lo
         epoch_time = time.time() - start_time
         # Print & Save
         epoch_print(epoch_i, epoch_time, train_epoch_loss, train_epoch_metric, valid_epoch_loss, valid_epoch_metric)
-        if valid_metric > best_metric:
-            best_metric = valid_metric  
+        if valid_epoch_metric > best_metric:
+            best_metric = valid_epoch_metric  
             try   : torch.save(model.state_dict(), model_path)
             except: pass
             print(' <-- Checkpoint!')

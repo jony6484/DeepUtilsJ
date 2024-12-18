@@ -1,9 +1,12 @@
 from setuptools import find_packages, setup
 
+VERSION = '0.1.0'
+DESCRIPTION = 'Deep learning utils'
 setup(
     name='DeepUtilsJ',
-    packages=find_packages(include=['DeepUtilsJ']),
-    version='0.1.0',
-    description='Deep learning utils',
+    packages=find_packages(),
+    version=VERSION,
+    description=DESCRIPTION,
     author='Jonathan Fuchs',
+    author_email="<jony6484@gmail.com>",
 )
