@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import DeepUtilsJ.models.model_utils as model_utils
 
 
 class LinearEncDec(nn.Module):
@@ -61,16 +62,19 @@ class LinearVAE(nn.Module):
     
 
 class LinearCVAE(nn.Module):
-    def __init__(self, n_classes, input_size, bottleneck_dim, enc_hidden_sizes=None, class_hidden_sizes=None, p_drop=0.0) -> None:
+    def __init__(self, n_classes, input_size, neck_dim, enc_hidden_sizes=None, class_hidden_sizes=None, p_drop=0.0, neck_activation=None) -> None:
         super().__init__()
         if enc_hidden_sizes is None:
-            dec_hidden_sizes = None
+            dec_hidden_sizes = None 
         else:
             dec_hidden_sizes = enc_hidden_sizes[::-1]
         self.n_classes = n_classes
-        self.encoder    = LinearEncDec(input_size, bottleneck_dim * 2, enc_hidden_sizes, p_drop=p_drop) # mu + var
-        self.decoder    = LinearEncDec(bottleneck_dim, input_size    , dec_hidden_sizes, p_drop=p_drop)
-        self.classifier = LinearEncDec(bottleneck_dim, n_classes   , class_hidden_sizes, p_drop=p_drop) 
+        self.encoder    = LinearEncDec(input_size, neck_dim * 2, enc_hidden_sizes, p_drop=p_drop) # mu + var
+        self.decoder    = LinearEncDec(neck_dim, input_size    , dec_hidden_sizes, p_drop=p_drop)
+        self.classifier = LinearEncDec(neck_dim, n_classes   , class_hidden_sizes, p_drop=p_drop) 
+        if neck_activation is not None:
+            self.decoder = model_utils.add_first_layer(self.decoder, neck_activation, new_layer_name="neck_activation")
+            self.classifier = model_utils.add_first_layer(self.classifier, neck_activation, new_layer_name="neck_activation")       
         
     def forward(self, X):
         X = self.encoder(X)
@@ -81,7 +85,7 @@ class LinearCVAE(nn.Module):
             Z = sigma * e + mu
         else:
             Z = mu
-        Z = F.tanh(Z)
+        # Z = F.tanh(Z)
         X = self.decoder(Z)        
         Y_hat = self.classifier(Z)
         return X, mu, log_var, Y_hat
