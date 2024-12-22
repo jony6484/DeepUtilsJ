@@ -1,8 +1,9 @@
 import path_setup
-from DeepUtilsJ.models.autoencoder import LinearCVAE
+from DeepUtilsJ.models.autoencoder import LinearCVAE, LinearEncDec
+from DeepUtilsJ.losses import VAELoss
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 class TempModel(nn.Module):
     def __init__(self):
@@ -15,6 +16,17 @@ class TempModel(nn.Module):
         X = self.layer2(X)
         return X
 
-model = LinearCVAE(5, 3000, 2, [700, 100, 30], [20, 10], neck_activation=nn.Tanh())
+model1 = LinearEncDec(5, 3, return_dict=True)
+model2 = LinearEncDec(5, 3, return_dict=False)
 
+
+def some_func(lst):
+    outputs = {'a':1, 'b':2}
+    c=3
+    # l = lst[0]
+    for l in lst:
+        outputs[l] = locals()[l]
+    print(outputs)
+    
+some_func(['c'])
 print('done')
