@@ -86,6 +86,8 @@ class Trainer():
         return self.model, pd.DataFrame(dict(train_loss=train_loss, valid_loss=valid_loss, train_metric=train_metric))
     
     def outputs_dict_converter(self, outputs, output_names, device=None):
+        if not isinstance(outputs, list):
+            outputs = [outputs]
         output_dict = {key: output for key, output in zip(output_names, outputs)}
         if device is not None:
             for key in output_dict.keys():
