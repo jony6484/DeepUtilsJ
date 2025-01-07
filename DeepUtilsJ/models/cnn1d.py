@@ -20,8 +20,7 @@ class ConvBlock1D(nn.Module):
         return self.layers(X)
 
 
-
-class DensCnnEncoder1D(nn.Module):
+class DenseCnnEncoder1D(nn.Module):
     def __init__(self, in_channels, channel_list, output_size, kernel_size):
         super().__init__()
         input_ii = in_channels
@@ -71,7 +70,7 @@ class ResCnnEncoder1D(nn.Module):
         self.layers.append(ConvBlock1D(in_channels, const_channels, kernel_size=kernel_size))
         for ii in range(n_res_blocks):
             self.layers.append(ResCnnBlock1D(const_channels, kernel_size=kernel_size))
-        self.layers.append(DensCnnEncoder1D(in_channels=const_channels, channel_list=[const_channels]*n_downsample_blocks, output_size=output_size, kernel_size=kernel_size))
+        self.layers.append(DenseCnnEncoder1D(in_channels=const_channels, channel_list=[const_channels]*n_downsample_blocks, output_size=output_size, kernel_size=kernel_size))
         self.layers = nn.Sequential(*self.layers)
 
     def forward(self, X):
