@@ -86,7 +86,7 @@ class Trainer():
         return self.model, pd.DataFrame(dict(train_loss=train_loss, valid_loss=valid_loss, train_metric=train_metric))
     
     def outputs_dict_converter(self, outputs, output_names, device=None):
-        if not isinstance(outputs, list):
+        if not (isinstance(outputs, list) or isinstance(outputs, tuple)):
             outputs = [outputs]
         output_dict = {key: output for key, output in zip(output_names, outputs)}
         if device is not None:
@@ -130,7 +130,7 @@ class Trainer():
                         for key in self.epoch_output_names:
                             epoch_outputs[key].append(combined_outputs[key].detach().cpu())
             with torch.no_grad():
-                N_batch = list(loader_outputs.values())[0].shape[0]
+                N_batch = list(loader_outputs.values())[1].shape[0]
                 count += N_batch
                 epoch_loss += N_batch * loss.item()
                 epoch_metric += N_batch * self.metric_func(*map(combined_outputs.get, self.metric_input_names))
