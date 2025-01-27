@@ -45,10 +45,11 @@ class Trainer():
         if resume_trian:
             try: 
                 start_epoch, best_metric, training_curves = self.load_checkpoint()
-                train_loss = np.pad(training_curves['train_loss'], (0, n_epochs), mode='empty')
-                train_metric = np.pad(training_curves['train_metric'], (0, n_epochs), mode='empty')
-                valid_loss = np.pad(training_curves['valid_loss'], (0, n_epochs), mode='empty')
-                valid_metric = np.pad(training_curves['valid_metric'], (0, n_epochs), mode='empty')
+                start_epoch += 1
+                train_loss = np.pad(training_curves['train_loss'], (0, n_epochs), mode='constant', constant_values=np.nan)
+                train_metric = np.pad(training_curves['train_metric'], (0, n_epochs), mode='constant', constant_values=np.nan)
+                valid_loss = np.pad(training_curves['valid_loss'], (0, n_epochs), mode='constant', constant_values=np.nan)
+                valid_metric = np.pad(training_curves['valid_metric'], (0, n_epochs), mode='constant', constant_values=np.nan)
             except:
                 print('coud not load checkpoint')
                 return
@@ -81,13 +82,13 @@ class Trainer():
             # Time
             epoch_time = time.time() - start_time
             # Print & Save
-            self.epoch_print(epoch_i, n_epochs, epoch_time, train_loss[epoch_i], train_metric[epoch_i], valid_loss[epoch_i], valid_metric[epoch_i])
+            self.epoch_print(epoch_i, start_epoch + n_epochs, epoch_time, train_loss[epoch_i], train_metric[epoch_i], valid_loss[epoch_i], valid_metric[epoch_i])
             if self.plot_training_curve:
                 self.plot_training(train_loss, train_metric, valid_loss, valid_metric)
             
             if valid_metric[epoch_i] > best_metric:
                 best_metric = valid_metric[epoch_i]
-                training_curves = dict(train_loss=train_loss, valid_loss=valid_loss, train_metric=train_metric) 
+                training_curves = dict(train_loss=train_loss, valid_loss=valid_loss, train_metric=train_metric, valid_metric=valid_metric) 
                 self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves)
                 if self.plot_output_names is not None:
                     self.plot_outputs(train_epoch_outputs, valid_epoch_outputs)
@@ -101,7 +102,7 @@ class Trainer():
     def save_checkpoint(self, epoch_i, best_metric, training_curves):
         checkpoint = {
         'epoch': epoch_i,
-        'metric': best_metric,
+        'best_metric': best_metric,
         'model_state': self.model.state_dict(),
         'optimizer_state': self.optimizer.state_dict(),
         'scheduler_state': self.scheduler.state_dict() if self.scheduler else None,
