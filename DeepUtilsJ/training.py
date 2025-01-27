@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 # from torch.utils.tensorboard import SummaryWriter
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import random
 
 class Trainer():
     def __init__(self, model, loss_func, metric_func, optimizer, scheduler=None, 
@@ -40,12 +41,24 @@ class Trainer():
         self.plots_dir = self.model_path.parent / 'plots'
         self.plots_dir.mkdir(exist_ok=True)
     
-    def train(self, train_loader, valid_loader, n_epochs=2):
-        train_loss = np.full(n_epochs, np.nan)
-        train_metric = np.full(n_epochs, np.nan)
-        valid_loss = np.full(n_epochs, np.nan)
-        valid_metric = np.full(n_epochs, np.nan)
-        best_metric = -float('inf') 
+    def train(self, train_loader, valid_loader, n_epochs=2, resume_trian=False):
+        if resume_trian:
+            try: 
+                start_epoch, best_metric, training_curves = self.load_checkpoint()
+                train_loss = np.pad(training_curves['train_loss'], (0, n_epochs), mode='empty')
+                train_metric = np.pad(training_curves['train_metric'], (0, n_epochs), mode='empty')
+                valid_loss = np.pad(training_curves['valid_loss'], (0, n_epochs), mode='empty')
+                valid_metric = np.pad(training_curves['valid_metric'], (0, n_epochs), mode='empty')
+            except:
+                print('coud not load checkpoint')
+                return
+        else:
+            start_epoch = 0
+            train_loss = np.full(n_epochs, np.nan)
+            train_metric = np.full(n_epochs, np.nan)
+            valid_loss = np.full(n_epochs, np.nan)
+            valid_metric = np.full(n_epochs, np.nan)
+            best_metric = -float('inf') 
         if self.plot_training_curve:
             self.figs['loss'] = go.Figure()
             self.figs['metric'] = go.Figure()
@@ -54,7 +67,7 @@ class Trainer():
                 self.figs[output_name] = make_subplots(rows=1, cols=2, subplot_titles=(f"Train - {output_name}", f"Valid - {output_name}"))
         # Epochs:
         self.epoch_counter = 0
-        for epoch_i in range(n_epochs):
+        for epoch_i in range(start_epoch, start_epoch + n_epochs):
             self.epoch_counter = epoch_i
             start_time = time.time()
             # Train
@@ -73,18 +86,51 @@ class Trainer():
                 self.plot_training(train_loss, train_metric, valid_loss, valid_metric)
             
             if valid_metric[epoch_i] > best_metric:
-                best_metric = valid_metric[epoch_i]  
-                try   : torch.save(self.model.state_dict(), self.model_path)
-                except: pass
+                best_metric = valid_metric[epoch_i]
+                training_curves = dict(train_loss=train_loss, valid_loss=valid_loss, train_metric=train_metric) 
+                self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves)
                 if self.plot_output_names is not None:
                     self.plot_outputs(train_epoch_outputs, valid_epoch_outputs)
                 print(' <-- Checkpoint!')
             else:
                 print('')   
         # Reloading and returning the model  
-        self.model.load_state_dict(torch.load(self.model_path))
-        return self.model, pd.DataFrame(dict(train_loss=train_loss, valid_loss=valid_loss, train_metric=train_metric))
+        _, _, training_curves = self.load_checkpoint()
+        return self.model
     
+    def save_checkpoint(self, epoch_i, best_metric, training_curves):
+        checkpoint = {
+        'epoch': epoch_i,
+        'metric': best_metric,
+        'model_state': self.model.state_dict(),
+        'optimizer_state': self.optimizer.state_dict(),
+        'scheduler_state': self.scheduler.state_dict() if self.scheduler else None,
+        'rng_states': {
+            'torch_rng': torch.get_rng_state(),
+            'cuda_rng': torch.cuda.get_rng_state_all(),
+            'numpy_rng': np.random.get_state(),
+            'python_rng': random.getstate()
+            },
+        'training_curves': training_curves
+        }
+        try:    torch.save(checkpoint, self.model_path)
+        except: print("error: can't save checkpoint")
+
+    def load_checkpoint(self):
+        checkpoint = torch.load(self.model_path)
+        self.model.load_state_dict(checkpoint['model_state'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state'])
+        if checkpoint['scheduler_state']:
+            self.scheduler.load_state_dict(checkpoint['scheduler_state'])
+        torch.set_rng_state(checkpoint['rng_states']['torch_rng'])
+        torch.cuda.set_rng_state_all(checkpoint['rng_states']['cuda_rng'])
+        np.random.set_state(checkpoint['rng_states']['numpy_rng'])
+        random.setstate(checkpoint['rng_states']['python_rng'])
+        epoch_i = checkpoint['epoch']
+        best_metric = checkpoint['best_metric']
+        training_curves = checkpoint['training_curves']
+        return epoch_i, best_metric, training_curves
+
     def outputs_dict_converter(self, outputs, output_names, device=None):
         if not (isinstance(outputs, list) or isinstance(outputs, tuple)):
             outputs = [outputs]

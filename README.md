@@ -30,5 +30,6 @@ trainer = training.Trainer(model=model, loss_func=loss, metric_func=metric, opti
                                plot_output_names=['mu'])
 model, metrics = trainer.train(train_loader=loader_train, valid_loader=loader_valid, n_epochs=60)
 ```
+If we wish to continue the training, all the data is saved inside the model.pt file, just run the trainer.train method with the "resume_train=True", the n_epochs are the additional repochs that will be added.
 # Bulid
 python setup.py bdist_wheel
