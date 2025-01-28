@@ -109,8 +109,8 @@ class Trainer():
                 print(' <-- Checkpoint!')
             else:
                 print('')   
-        # Save last epoch for future training
-        self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.last_epoch_path)
+            # Save last epoch everythime for future training
+            self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.last_epoch_path)
         # Reloading and returning the model  
         _, _, training_curves = self.load_checkpoint(path=self.checkpoint_path)
         return self.model
@@ -134,7 +134,7 @@ class Trainer():
         except: print("error: can't save checkpoint")
 
     def load_checkpoint(self, path):
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, weights_only=False)
         self.model.load_state_dict(checkpoint['model_state'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state'])
         if checkpoint['scheduler_state']:
