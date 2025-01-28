@@ -102,7 +102,7 @@ class Trainer():
             
             if valid_metric[epoch_i] > best_metric:
                 best_metric = valid_metric[epoch_i]
-                training_curves = dict(train_loss=train_loss, valid_loss=valid_loss, train_metric=train_metric, valid_metric=valid_metric) 
+                training_curves = dict(train_loss=train_loss[:epoch_i+1], valid_loss=valid_loss[:epoch_i+1], train_metric=train_metric[:epoch_i+1], valid_metric=valid_metric[:epoch_i+1]) 
                 self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.checkpoint_path)
                 if self.plot_output_names is not None:
                     self.plot_outputs(train_epoch_outputs, valid_epoch_outputs)
