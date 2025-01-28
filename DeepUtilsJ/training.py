@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import random
-from utils import validate_dir
+from .utils import validate_dir
 
 
 class RiskOverwriteException(Exception):
@@ -31,6 +31,7 @@ class Trainer():
                  plot_training_curve = False
                  ):
         self.model = model
+        self.model_name = model_name
         self.loss_func = loss_func
         self.metric_func = metric_func
         self.optimizer = optimizer
@@ -114,10 +115,10 @@ class Trainer():
         _, _, training_curves = self.load_checkpoint(path=self.checkpoint_path)
         return self.model
     
-    def save_checkpoint(self, epoch_i, best_metic, training_curves, path):
+    def save_checkpoint(self, epoch_i, best_metric, training_curves, path):
         checkpoint = {
         'epoch': epoch_i,
-        'best_metic': best_metic,
+        'best_metric': best_metric,
         'model_state': self.model.state_dict(),
         'optimizer_state': self.optimizer.state_dict(),
         'scheduler_state': self.scheduler.state_dict() if self.scheduler else None,
@@ -226,7 +227,7 @@ class Trainer():
             self.figs[output_name].update_layout(title=f"{output_name} visualization at Epoch {self.epoch_counter}",
                                                     plot_bgcolor="black", paper_bgcolor="black", font=dict(color="white"),
                                                     legend=dict(bordercolor='white', borderwidth=1))
-            path_to_file = self.plots_dir.absolute() / f"{self.model_path.stem}__{output_name}__visualization.html"
+            path_to_file = self.plots_dir.absolute() / f"{self.model_name}__{output_name}__visualization.html"
             for subset, outputs in zip(["Train", "Valid"], [train_outputs, valid_outputs]):
                 self.figs[output_name].add_trace(go.Scatter(y=outputs[output_name], 
                                                                 mode='lines',
