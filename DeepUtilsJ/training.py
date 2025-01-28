@@ -8,10 +8,18 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import random
+from utils import validate_dir
+
+
+class RiskOverwriteException(Exception):
+    def __init__(self, message):            
+        super().__init__(message)
+
 
 class Trainer():
     def __init__(self, model, loss_func, metric_func, optimizer, scheduler=None, 
-                 model_path=".\model.pt",
+                 model_dir="./",
+                 model_name="model",
                  loader_output_names=['X', 'Y'], 
                  model_input_names=['X'], 
                  model_output_names=['X_hat'],
@@ -27,7 +35,6 @@ class Trainer():
         self.metric_func = metric_func
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.model_path = Path(model_path)
         self.loader_output_names = loader_output_names
         self.model_input_names = model_input_names
         self.model_output_names = model_output_names
@@ -38,28 +45,34 @@ class Trainer():
         self.save_all_output_plots = save_all_output_plots
         self.plot_training_curve = plot_training_curve
         self.figs = {}
-        self.plots_dir = self.model_path.parent / 'plots'
-        self.plots_dir.mkdir(exist_ok=True)
+        self.model_dir = validate_dir(model_dir)
+        self.checkpoint_path = self.model_dir / "checkpoint.pt"
+        self.last_epoch_path = self.model_dir / "last_epoch.pt"
+        self.plots_dir = validate_dir(self.model_dir / 'plots')
     
-    def train(self, train_loader, valid_loader, n_epochs=2, resume_trian=False):
-        if resume_trian:
-            try: 
-                start_epoch, best_metric, training_curves = self.load_checkpoint()
-                start_epoch += 1
-                train_loss = np.pad(training_curves['train_loss'], (0, n_epochs), mode='constant', constant_values=np.nan)
-                train_metric = np.pad(training_curves['train_metric'], (0, n_epochs), mode='constant', constant_values=np.nan)
-                valid_loss = np.pad(training_curves['valid_loss'], (0, n_epochs), mode='constant', constant_values=np.nan)
-                valid_metric = np.pad(training_curves['valid_metric'], (0, n_epochs), mode='constant', constant_values=np.nan)
-            except:
-                print('coud not load checkpoint')
-                return
-        else:
+    def train(self, train_loader, valid_loader, n_epochs=2, try_resume=True):
+        is_empty = not self.last_epoch_path.is_file()
+        if is_empty:
             start_epoch = 0
             train_loss = np.full(n_epochs, np.nan)
             train_metric = np.full(n_epochs, np.nan)
             valid_loss = np.full(n_epochs, np.nan)
             valid_metric = np.full(n_epochs, np.nan)
             best_metric = -float('inf') 
+        elif try_resume:
+            try: 
+                # load last epoch
+                start_epoch, best_metric, training_curves = self.load_checkpoint(path=self.last_epoch_path)
+                start_epoch += 1
+                train_loss = np.pad(training_curves['train_loss'], (0, n_epochs), mode='constant', constant_values=np.nan)
+                train_metric = np.pad(training_curves['train_metric'], (0, n_epochs), mode='constant', constant_values=np.nan)
+                valid_loss = np.pad(training_curves['valid_loss'], (0, n_epochs), mode='constant', constant_values=np.nan)
+                valid_metric = np.pad(training_curves['valid_metric'], (0, n_epochs), mode='constant', constant_values=np.nan)
+            except:
+                print('could not load last epoch')
+                return
+        else:
+            raise RiskOverwriteException("direcory not empty and 'try_resume=False'")
         if self.plot_training_curve:
             self.figs['loss'] = go.Figure()
             self.figs['metric'] = go.Figure()
@@ -89,20 +102,22 @@ class Trainer():
             if valid_metric[epoch_i] > best_metric:
                 best_metric = valid_metric[epoch_i]
                 training_curves = dict(train_loss=train_loss, valid_loss=valid_loss, train_metric=train_metric, valid_metric=valid_metric) 
-                self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves)
+                self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.checkpoint_path)
                 if self.plot_output_names is not None:
                     self.plot_outputs(train_epoch_outputs, valid_epoch_outputs)
                 print(' <-- Checkpoint!')
             else:
                 print('')   
+        # Save last epoch for future training
+        self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.last_epoch_path)
         # Reloading and returning the model  
-        _, _, training_curves = self.load_checkpoint()
+        _, _, training_curves = self.load_checkpoint(path=self.checkpoint_path)
         return self.model
     
-    def save_checkpoint(self, epoch_i, best_metric, training_curves):
+    def save_checkpoint(self, epoch_i, best_metic, training_curves, path):
         checkpoint = {
         'epoch': epoch_i,
-        'best_metric': best_metric,
+        'best_metic': best_metic,
         'model_state': self.model.state_dict(),
         'optimizer_state': self.optimizer.state_dict(),
         'scheduler_state': self.scheduler.state_dict() if self.scheduler else None,
@@ -114,11 +129,11 @@ class Trainer():
             },
         'training_curves': training_curves
         }
-        try:    torch.save(checkpoint, self.model_path)
+        try:    torch.save(checkpoint, path)
         except: print("error: can't save checkpoint")
 
-    def load_checkpoint(self):
-        checkpoint = torch.load(self.model_path)
+    def load_checkpoint(self, path):
+        checkpoint = torch.load(path)
         self.model.load_state_dict(checkpoint['model_state'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state'])
         if checkpoint['scheduler_state']:
