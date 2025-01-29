@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import random
 from .utils import validate_dir
-from torchsummary import summary
+from torchinfo import summary
 
 
 class RiskOverwriteException(Exception):
@@ -52,9 +52,17 @@ class Trainer():
         self.last_epoch_path = self.model_dir / "last_epoch.pt"
         self.plots_dir = validate_dir(self.model_dir / 'plots')
     
+    def print_model_summary(self, loader):
+        indx = np.random.randint(len(loader.dataset))
+        dummy_shape = loader.dataset[indx][0].shape
+        model_sum = summary(self.model, dummy_shape, batch_dim=0)
+        with (self.model_dir / "model_summary.txt").open('a', encoding="utf-8") as file:
+            file.write(str(model_sum))
+
     def train(self, train_loader, valid_loader, n_epochs=2, try_resume=True):
         # print model summary:
-        # summary(self.model, next(iter(train_loader)[0].shape))
+        self.print_model_summary(train_loader)
+        # Dealing with resume:
         is_empty = not self.last_epoch_path.is_file()
         if is_empty:
             start_epoch = 0
