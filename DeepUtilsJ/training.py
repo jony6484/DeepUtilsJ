@@ -51,6 +51,8 @@ class Trainer():
         self.checkpoint_path = self.model_dir / "checkpoint.pt"
         self.last_epoch_path = self.model_dir / "last_epoch.pt"
         self.plots_dir = validate_dir(self.model_dir / 'plots')
+        self.checkpoint_flag = None
+        self.checkpoints = []
     
     def print_model_summary(self, loader):
         indx = np.random.randint(len(loader.dataset))
@@ -70,7 +72,7 @@ class Trainer():
             train_metric = np.full(n_epochs, np.nan)
             valid_loss = np.full(n_epochs, np.nan)
             valid_metric = np.full(n_epochs, np.nan)
-            best_metric = -float('inf') 
+            best_metric = -float('inf')
         elif try_resume:
             try: 
                 # load last epoch
@@ -106,20 +108,21 @@ class Trainer():
             valid_metric[epoch_i]  = valid_epoch_outputs['metric']
             # Time
             epoch_time = time.time() - start_time
-            # Print & Save
-            self.epoch_print(epoch_i, start_epoch + n_epochs, epoch_time, train_loss[epoch_i], train_metric[epoch_i], valid_loss[epoch_i], valid_metric[epoch_i])
-            if self.plot_training_curve:
-                self.plot_training(train_loss, train_metric, valid_loss, valid_metric)
-            
+            # Checkpoint
             if valid_metric[epoch_i] > best_metric:
+                self.checkpoint_flag = True
+                self.checkpoints.append(epoch_i)
                 best_metric = valid_metric[epoch_i]
                 training_curves = dict(train_loss=train_loss[:epoch_i+1], valid_loss=valid_loss[:epoch_i+1], train_metric=train_metric[:epoch_i+1], valid_metric=valid_metric[:epoch_i+1]) 
                 self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.checkpoint_path)
                 if self.plot_output_names is not None:
                     self.plot_outputs(train_epoch_outputs, valid_epoch_outputs)
-                print(' <-- Checkpoint!')
             else:
-                print('')   
+                self.checkpoint_flag = False
+            # Print  
+            self.epoch_print(epoch_i, start_epoch + n_epochs, epoch_time, train_loss[epoch_i], train_metric[epoch_i], valid_loss[epoch_i], valid_metric[epoch_i])
+            if self.plot_training_curve:
+                self.plot_training(train_loss, train_metric, valid_loss, valid_metric)
             # Save last epoch everythime for future training
             self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.last_epoch_path)
         # Reloading and returning the model  
@@ -139,7 +142,8 @@ class Trainer():
             'numpy_rng': np.random.get_state(),
             'python_rng': random.getstate()
             },
-        'training_curves': training_curves
+        'training_curves': training_curves,
+        'checkpoints': self.checkpoints
         }
         try:    torch.save(checkpoint, path)
         except: print("error: can't save checkpoint")
@@ -157,6 +161,7 @@ class Trainer():
         epoch_i = checkpoint['epoch']
         best_metric = checkpoint['best_metric']
         training_curves = checkpoint['training_curves']
+        self.checkpoints = checkpoint['checkpoints']
         return epoch_i, best_metric, training_curves
 
     def outputs_dict_converter(self, outputs, output_names, device=None):
@@ -229,6 +234,10 @@ class Trainer():
         print(' | Val Metric: '   f'{val_metric   :6.3f}',   end='')
         print(' | epoch time: '   f'{epoch_time   :6.3f}',   end='')
         print(' | time left: '   f'{epoch_time * (n_epochs - epoch_i)   :6.3f} |', end='')
+        if self.checkpoint_flag:
+            print(' <-- Checkpoint!')
+        else:
+            print("")
 
     def plot_training(self, train_loss, train_metric, valid_loss, valid_metric):
         train_outputs = {'loss': train_loss, 'metric': train_metric}
@@ -243,6 +252,12 @@ class Trainer():
                 self.figs[output_name].add_trace(go.Scatter(y=outputs[output_name], 
                                                                 mode='lines',
                                                                 name=f'{subset}'))
+            # Only once for valid metrics
+            if output_name == 'metric':
+                self.figs[output_name].add_trace(go.Scatter(x=self.checkpoints, y=outputs[output_name][self.checkpoints], 
+                                                                mode='markers',
+                                                                marker=dict(symbol='x', size=8, color='yellow'),
+                                                                name=f'chkp'))
             self.figs[output_name].write_html(path_to_file, auto_open=False)
 
     def plot_outputs(self, train_epoch_outputs, valid_epoch_outputs):
