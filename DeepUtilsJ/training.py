@@ -31,6 +31,14 @@ class Trainer():
                  save_all_output_plots = False,
                  plot_training_curve = False
                  ):
+        self.init_params = dict(
+                 model_dir=model_dir,
+                 model_name=model_name,
+                 loader_output_names=loader_output_names, 
+                 model_input_names=model_input_names, 
+                 model_output_names=model_output_names,
+                 loss_input_names=loss_input_names, 
+                 metric_input_names=metric_input_names)
         self.model = model
         self.model_name = model_name
         self.loss_func = loss_func
@@ -143,7 +151,8 @@ class Trainer():
             'python_rng': random.getstate()
             },
         'training_curves': training_curves,
-        'checkpoints': self.checkpoints
+        'checkpoints': self.checkpoints,
+        'init_params': self.init_params
         }
         try:    torch.save(checkpoint, path)
         except: print("error: can't save checkpoint")
