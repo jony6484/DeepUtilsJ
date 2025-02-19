@@ -29,7 +29,9 @@ class Trainer():
                  epoch_output_names = None,
                  plot_output_names = None,
                  save_all_output_plots = False,
-                 plot_training_curve = False
+                 plot_training_curve = False,
+                 extra_files_to_save = None,
+                 max_plot_samples=None
                  ):
         self.init_params = dict(
                  model_dir=model_dir,
@@ -55,12 +57,20 @@ class Trainer():
         self.save_all_output_plots = save_all_output_plots
         self.plot_training_curve = plot_training_curve
         self.figs = {}
+        self.max_plot_samples = max_plot_samples
         self.model_dir = validate_dir(model_dir)
+        self.scripts_dir = validate_dir(model_dir / "scripts")        
         self.checkpoint_path = self.model_dir / "checkpoint.pt"
         self.last_epoch_path = self.model_dir / "last_epoch.pt"
         self.plots_dir = validate_dir(self.model_dir / 'plots')
         self.checkpoint_flag = None
         self.checkpoints = []
+        if isinstance(extra_files_to_save, list):
+            self.extra_files_to_save = extra_files_to_save
+        elif isinstance(extra_files_to_save, Path) or isinstance(extra_files_to_save, str):
+            self.extra_files_to_save = [extra_files_to_save]
+        else:
+            self.extra_files_to_save = []
     
     def print_model_summary(self, loader):
         indx = np.random.randint(len(loader.dataset))
@@ -81,6 +91,8 @@ class Trainer():
             valid_loss = np.full(n_epochs, np.nan)
             valid_metric = np.full(n_epochs, np.nan)
             best_metric = -float('inf')
+            for file in self.extra_files_to_save + [self.get_caller_script()]:
+                self.backup_file(file)
         elif try_resume:
             try: 
                 # load last epoch
@@ -99,6 +111,8 @@ class Trainer():
             self.figs['loss'] = go.Figure()
             self.figs['metric'] = go.Figure()
         if self.plot_output_names is not None:
+            if self.max_plot_samples is None:
+                self.max_plot_samples = len(valid_loader.dataset)
             for output_name in self.plot_output_names:
                 self.figs[output_name] = make_subplots(rows=1, cols=2, subplot_titles=(f"Train - {output_name}", f"Valid - {output_name}"))
         # Epochs:
@@ -137,6 +151,28 @@ class Trainer():
         _, _, training_curves = self.load_checkpoint(path=self.checkpoint_path)
         return self.model
     
+    def get_caller_script(self):
+        import inspect
+        stack = inspect.stack()
+        files = []
+        bad_strs = [".vscode", "pdb", "bdb", "runpy"]
+        for f in [Path(s.filename) for s in stack]:
+            bad_file = False
+            name = str(f)
+            for bad_str in bad_strs:
+                if bad_str in name:
+                    bad_file = True
+                    break
+            if (not f.is_file()) or (f.samefile(__file__)):
+                bad_file = True
+            if not bad_file:
+                files.append(f)
+        return files[-1]
+
+    def backup_file(self, file):
+        import shutil
+        shutil.copy(Path(file), self.scripts_dir / Path(file).name)
+
     def save_checkpoint(self, epoch_i, best_metric, training_curves, path):
         checkpoint = {
         'epoch': epoch_i,
@@ -276,13 +312,14 @@ class Trainer():
                 self.figs[output_name].update_layout(title=f"{output_name} visualization at Epoch {self.epoch_counter}",
                                                      plot_bgcolor="black", paper_bgcolor="black", font=dict(color="white"),
                                                      legend=dict(bordercolor='white', borderwidth=1))
-                path_to_file = self.plots_dir.absolute() / f"{self.model_path.stem}__{output_name}__visualization.html"
+                path_to_file = self.plots_dir.absolute() / f"{self.model_name.stem}__{output_name}__visualization.html"
                 for subset, col, epoch_outputs in zip(["Train", "Valid"], [1, 2], [train_epoch_outputs, valid_epoch_outputs]):
                     marker_dict = dict(colorscale='Viridis', size=3, showscale=False)
                     if 'Y' in epoch_outputs:
                         marker_dict['color'] = epoch_outputs['Y']
-                    self.figs[output_name].add_trace(go.Scatter(x=epoch_outputs[output_name][:, 0].detach().cpu().numpy(), 
-                                                                y=epoch_outputs[output_name][:, 1].detach().cpu().numpy(), 
+                    plot_inds = torch.randperm(len(epoch_outputs[output_name]))[:self.max_plot_samples]
+                    self.figs[output_name].add_trace(go.Scatter(x=epoch_outputs[output_name][plot_inds, 0].detach().cpu().numpy(), 
+                                                                y=epoch_outputs[output_name][plot_inds, 1].detach().cpu().numpy(), 
                                                                 mode='markers', marker=marker_dict,
                                                                 name=f'{subset} - Epoch {self.epoch_counter}'), row=1, col=col)
                 self.figs[output_name].write_html(path_to_file, auto_open=False)
