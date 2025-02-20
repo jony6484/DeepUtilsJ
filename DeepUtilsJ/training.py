@@ -59,7 +59,7 @@ class Trainer():
         self.figs = {}
         self.max_plot_samples = max_plot_samples
         self.model_dir = validate_dir(model_dir)
-        self.scripts_dir = validate_dir(model_dir / "scripts")        
+        self.scripts_dir = validate_dir(self.model_dir / "scripts")        
         self.checkpoint_path = self.model_dir / "checkpoint.pt"
         self.last_epoch_path = self.model_dir / "last_epoch.pt"
         self.plots_dir = validate_dir(self.model_dir / 'plots')
@@ -312,7 +312,7 @@ class Trainer():
                 self.figs[output_name].update_layout(title=f"{output_name} visualization at Epoch {self.epoch_counter}",
                                                      plot_bgcolor="black", paper_bgcolor="black", font=dict(color="white"),
                                                      legend=dict(bordercolor='white', borderwidth=1))
-                path_to_file = self.plots_dir.absolute() / f"{self.model_name.stem}__{output_name}__visualization.html"
+                path_to_file = self.plots_dir.absolute() / f"{self.model_name}__{output_name}__visualization.html"
                 for subset, col, epoch_outputs in zip(["Train", "Valid"], [1, 2], [train_epoch_outputs, valid_epoch_outputs]):
                     marker_dict = dict(colorscale='Viridis', size=3, showscale=False)
                     if 'Y' in epoch_outputs:
