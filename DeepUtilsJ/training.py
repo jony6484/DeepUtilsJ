@@ -307,33 +307,32 @@ class Trainer():
             self.figs[output_name].write_html(path_to_file, auto_open=False)
 
     def plot_outputs(self, train_epoch_outputs, valid_epoch_outputs):
-        with torch.no_grad():
-            for output_name in self.plot_output_names:
-                self.figs[output_name].data = []
-                self.figs[output_name].update_layout(title=f"{output_name} visualization at Epoch {self.epoch_counter}",
-                                                     plot_bgcolor="black", paper_bgcolor="black", font=dict(color="white"),
-                                                     legend=dict(bordercolor='white', borderwidth=1))
-                path_to_file = self.plots_dir.absolute() / f"{self.model_name}__{output_name}__visualization.html"
-                for subset, col, epoch_outputs in zip(["Train", "Valid"], [1, 2], [train_epoch_outputs, valid_epoch_outputs]):
-                    marker_dict = dict(colorscale='Viridis', size=3, showscale=False)
-                    if 'Y' in epoch_outputs:
-                        marker_dict['color'] = epoch_outputs['Y']
-                    plot_inds = torch.randperm(len(epoch_outputs[output_name]))[:self.max_plot_samples]
-                    outputs = epoch_outputs[output_name][plot_inds, :].detach().cpu().numpy()
-                    if outputs.shape[-1] > 2:
-                        if subset == "Train":
-                            self.embedding_dim_reducer.fit(outputs)
-                        outputs = self.embedding_dim_reducer.transform(outputs)
-                    self.figs[output_name].add_trace(go.Scatter(x=outputs[:, 0], 
-                                                                y=outputs[:, 1], 
-                                                                mode='markers', marker=marker_dict,
-                                                                name=f'{subset} - Epoch {self.epoch_counter}'), row=1, col=col)
-                self.figs[output_name].write_html(path_to_file, auto_open=False)
-                self.figs[output_name].update_xaxes(showgrid=False, showline=False, zeroline=False)
-                self.figs[output_name].update_yaxes(showgrid=False, showline=False, zeroline=False)
-                if self.save_all_output_plots:
-                    path_to_file_ii = self.plots_dir.absolute() / f"{self.epoch_counter}__{self.model_name}__{output_name}__visualization.html"
-                    self.figs[output_name].write_html(path_to_file_ii, auto_open=False)
+        for output_name in self.plot_output_names:
+            self.figs[output_name].data = []
+            self.figs[output_name].update_layout(title=f"{output_name} visualization at Epoch {self.epoch_counter}",
+                                                    plot_bgcolor="black", paper_bgcolor="black", font=dict(color="white"),
+                                                    legend=dict(bordercolor='white', borderwidth=1))
+            path_to_file = self.plots_dir.absolute() / f"{self.model_name}__{output_name}__visualization.html"
+            for subset, col, epoch_outputs in zip(["Train", "Valid"], [1, 2], [train_epoch_outputs, valid_epoch_outputs]):
+                marker_dict = dict(colorscale='Viridis', size=3, showscale=False)
+                if 'Y' in epoch_outputs:
+                    marker_dict['color'] = epoch_outputs['Y']
+                plot_inds = torch.randperm(len(epoch_outputs[output_name]))[:self.max_plot_samples]
+                outputs = epoch_outputs[output_name][plot_inds, :].detach().cpu().numpy()
+                if outputs.shape[-1] > 2:
+                    if subset == "Train":
+                        self.embedding_dim_reducer.fit(outputs)
+                    outputs = self.embedding_dim_reducer.transform(outputs)
+                self.figs[output_name].add_trace(go.Scatter(x=outputs[:, 0], 
+                                                            y=outputs[:, 1], 
+                                                            mode='markers', marker=marker_dict,
+                                                            name=f'{subset} - Epoch {self.epoch_counter}'), row=1, col=col)
+            self.figs[output_name].write_html(path_to_file, auto_open=False)
+            self.figs[output_name].update_xaxes(showgrid=False, showline=False, zeroline=False)
+            self.figs[output_name].update_yaxes(showgrid=False, showline=False, zeroline=False)
+            if self.save_all_output_plots:
+                path_to_file_ii = self.plots_dir.absolute() / f"{self.epoch_counter}__{self.model_name}__{output_name}__visualization.html"
+                self.figs[output_name].write_html(path_to_file_ii, auto_open=False)
 
                   
                   
