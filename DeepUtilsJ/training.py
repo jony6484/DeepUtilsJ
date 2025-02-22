@@ -326,7 +326,7 @@ class Trainer():
                 self.figs[output_name].update_xaxes(showgrid=False, showline=False, zeroline=False)
                 self.figs[output_name].update_yaxes(showgrid=False, showline=False, zeroline=False)
                 if self.save_all_output_plots:
-                    path_to_file_ii = self.plots_dir.absolute() / f"{self.epoch_counter}__{self.model_path.stem}__{output_name}__visualization.html"
+                    path_to_file_ii = self.plots_dir.absolute() / f"{self.epoch_counter}__{self.model_name}__{output_name}__visualization.html"
                     self.figs[output_name].write_html(path_to_file_ii, auto_open=False)
 
                   
