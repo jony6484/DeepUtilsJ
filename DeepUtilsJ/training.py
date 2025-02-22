@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import time
 from pathlib import Path
-import pandas as pd
 import matplotlib.pyplot as plt
 # from torch.utils.tensorboard import SummaryWriter
 import plotly.graph_objects as go
