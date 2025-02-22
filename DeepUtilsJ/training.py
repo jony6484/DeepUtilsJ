@@ -31,7 +31,7 @@ class Trainer():
                  save_all_output_plots = False,
                  plot_training_curve = False,
                  extra_files_to_save = None,
-                 max_plot_samples=None
+                 max_plot_samples=3000
                  ):
         self.init_params = dict(
                  model_dir=model_dir,
@@ -111,8 +111,6 @@ class Trainer():
             self.figs['loss'] = go.Figure()
             self.figs['metric'] = go.Figure()
         if self.plot_output_names is not None:
-            if self.max_plot_samples is None:
-                self.max_plot_samples = len(valid_loader.dataset)
             for output_name in self.plot_output_names:
                 self.figs[output_name] = make_subplots(rows=1, cols=2, subplot_titles=(f"Train - {output_name}", f"Valid - {output_name}"))
         # Epochs:
