@@ -10,7 +10,7 @@ from plotly.subplots import make_subplots
 import random
 from .utils import validate_dir
 from torchinfo import summary
-
+from sklearn.decomposition import PCA
 
 class RiskOverwriteException(Exception):
     def __init__(self, message):            
@@ -31,7 +31,8 @@ class Trainer():
                  save_all_output_plots = False,
                  plot_training_curve = False,
                  extra_files_to_save = None,
-                 max_plot_samples=3000
+                 max_plot_samples=3000,
+                 embedding_dim_reducer = None
                  ):
         self.init_params = dict(
                  model_dir=model_dir,
@@ -54,6 +55,7 @@ class Trainer():
         self.metric_input_names = metric_input_names
         self.epoch_output_names = epoch_output_names
         self.plot_output_names = plot_output_names
+        self.embedding_dim_reducer = embedding_dim_reducer
         self.save_all_output_plots = save_all_output_plots
         self.plot_training_curve = plot_training_curve
         self.figs = {}
@@ -111,6 +113,8 @@ class Trainer():
             self.figs['loss'] = go.Figure()
             self.figs['metric'] = go.Figure()
         if self.plot_output_names is not None:
+            if self.embedding_dim_reducer is None:
+                self.embedding_dim_reducer = PCA(n_components=2)
             for output_name in self.plot_output_names:
                 self.figs[output_name] = make_subplots(rows=1, cols=2, subplot_titles=(f"Train - {output_name}", f"Valid - {output_name}"))
         # Epochs:
@@ -316,8 +320,13 @@ class Trainer():
                     if 'Y' in epoch_outputs:
                         marker_dict['color'] = epoch_outputs['Y']
                     plot_inds = torch.randperm(len(epoch_outputs[output_name]))[:self.max_plot_samples]
-                    self.figs[output_name].add_trace(go.Scatter(x=epoch_outputs[output_name][plot_inds, 0].detach().cpu().numpy(), 
-                                                                y=epoch_outputs[output_name][plot_inds, 1].detach().cpu().numpy(), 
+                    outputs = epoch_outputs[output_name][plot_inds, :].detach().cpu().numpy()
+                    if outputs.shape[-1] > 2:
+                        if subset == "Train":
+                            self.embedding_dim_reducer.fit(outputs)
+                        outputs = self.embedding_dim_reducer.transform(outputs)
+                    self.figs[output_name].add_trace(go.Scatter(x=outputs[:, 0], 
+                                                                y=outputs[:, 1], 
                                                                 mode='markers', marker=marker_dict,
                                                                 name=f'{subset} - Epoch {self.epoch_counter}'), row=1, col=col)
                 self.figs[output_name].write_html(path_to_file, auto_open=False)
