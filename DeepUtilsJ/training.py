@@ -315,7 +315,7 @@ class Trainer():
                                                      legend=dict(bordercolor='white', borderwidth=1))
                 path_to_file = self.plots_dir.absolute() / f"{self.model_name}__{output_name}__visualization.html"
                 for subset, col, epoch_outputs in zip(["Train", "Valid"], [1, 2], [train_epoch_outputs, valid_epoch_outputs]):
-                    marker_dict = dict(colorscale='Viridis', size=3, showscale=False)
+                    marker_dict = dict(colorscale='Rainbow', size=3, showscale=False)
                     if 'Y' in epoch_outputs:
                         marker_dict['color'] = epoch_outputs['Y']
                     plot_inds = torch.randperm(len(epoch_outputs[output_name]))[:self.max_plot_samples]
