@@ -360,6 +360,14 @@ class Trainer():
                                                             name=f'{subset} - Epoch {self.epoch_counter}',
                                                             hovertext=labels, hoverinfo="text"), row=row, col=col)
 
+            # Collect all axis names from the figure
+            x_axes = [ax for ax in self.figs[output_name]['layout'] if ax.startswith('xaxis')]
+            y_axes = [ax for ax in self.figs[output_name]['layout'] if ax.startswith('yaxis')]
+            # Match all x and y axes
+            for x in x_axes[1:]:  # Skip the first axis (xaxis)
+                self.figs[output_name].update_layout({x: dict(matches='x')})
+            for y in y_axes[1:]:  # Skip the first axis (yaxis)
+                self.figs[output_name].update_layout({y: dict(matches='y')})
             self.figs[output_name].write_html(path_to_file, auto_open=False)
             if self.save_all_output_plots:
                 path_to_file_ii = self.plots_dir.absolute() / f"{self.epoch_counter}__{self.model_name}__{output_name}__visualization.html"
