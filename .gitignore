@@ -1,4 +1,4 @@
-/dist/
+# /dist/
 /*.egg-info/
 /build/
 *.pyc

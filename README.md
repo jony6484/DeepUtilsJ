@@ -31,5 +31,30 @@ trainer = training.Trainer(model=model, loss_func=loss, metric_func=metric, opti
 model, metrics = trainer.train(train_loader=loader_train, valid_loader=loader_valid, n_epochs=60)
 ```
 If we wish to continue the training, all the data is saved inside the model.pt file, just run the trainer.train method with the "resume_train=True", the n_epochs are the additional repochs that will be added.
+More Examples:
+```python
+reducer = VaeReducer(input_dim=10, latent_dim=2, target_r2=0.75)
+trainer = Trainer(model=model, loss_func=loss_func, metric_func=metric_func, optimizer=optimizer,
+                  model_dir=model_dir, model_name="windowCnn", 
+                  loader_output_names=['X', 'Y'],
+                  model_input_names=['X'], 
+                  model_output_names=['Y_hat', 'Z'],
+                  loss_input_names=['Y_hat', 'Y'],
+                  metric_input_names=['Y_hat', 'Y'],
+                  epoch_output_names=['Z', 'Y', 'Y_hat'], 
+                  plot_output_names=['Z'], plot_training_curve=True, embedding_dim_reducer=reducer, max_plot_samples=5_000,
+                  int2label_dict=data_train.int2label
+                  )
+model = trainer.train(loader_train, loader_valid, n_epochs=100)
+```
+Here we have some new args:
+embedding_dim_reducer: if the output embedding dim is more than 2, default PCA is fitted on the Train data and applied on
+the Train+Validation. it can be replaced with any dimentionality reduction model, which has fit and transform methods, and
+could reduce from the embedding dim to 2 dimensions.
+
+max_plot_samples: defaults to 3000, specifeis how many scatter points to plot in the outputs plot.
+
+int2label_dict: if specified, is used to name the outputs via hoveron, must be a dict.
+
 # Bulid
 python setup.py bdist_wheel

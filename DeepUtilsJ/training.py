@@ -31,7 +31,8 @@ class Trainer():
                  plot_training_curve = False,
                  extra_files_to_save = None,
                  max_plot_samples=3000,
-                 embedding_dim_reducer = None
+                 embedding_dim_reducer = None,
+                 int2label_dict = None
                  ):
         self.init_params = dict(
                  model_dir=model_dir,
@@ -57,6 +58,7 @@ class Trainer():
         self.embedding_dim_reducer = embedding_dim_reducer
         self.save_all_output_plots = save_all_output_plots
         self.plot_training_curve = plot_training_curve
+        self.int2label_dict = int2label_dict
         self.figs = {}
         self.max_plot_samples = max_plot_samples
         self.model_dir = validate_dir(model_dir)
@@ -115,7 +117,13 @@ class Trainer():
             if self.embedding_dim_reducer is None:
                 self.embedding_dim_reducer = PCA(n_components=2)
             for output_name in self.plot_output_names:
-                self.figs[output_name] = make_subplots(rows=1, cols=2, subplot_titles=(f"Train - {output_name}", f"Valid - {output_name}"))
+                if ('Y' in self.epoch_output_names) and ('Y_hat' in self.epoch_output_names):
+                    self.figs[output_name] = make_subplots(rows=2, cols=2,
+                                                           subplot_titles=(f"Train: GT colored - {output_name}",   f"Valid: GT colored -   {output_name}",
+                                                                           f"Train: Pred colored - {output_name}", f"Valid: Pred colored - {output_name}"))
+                else:
+                    self.figs[output_name] = make_subplots(rows=1, cols=2,
+                                                           subplot_titles=(f"Train - {output_name}", f"Valid - {output_name}"))
         # Epochs:
         self.epoch_counter = 0
         for epoch_i in range(start_epoch, start_epoch + n_epochs):
@@ -311,25 +319,56 @@ class Trainer():
             self.figs[output_name].data = []
             self.figs[output_name].update_layout(title=f"{output_name} visualization at Epoch {self.epoch_counter}",
                                                     plot_bgcolor="black", paper_bgcolor="black", font=dict(color="white"),
-                                                    legend=dict(bordercolor='white', borderwidth=1))
+                                                    showlegend=False)
+            self.figs[output_name].update_xaxes(showgrid=False, showline=False, zeroline=False)
+            self.figs[output_name].update_yaxes(showgrid=False, showline=False, zeroline=False)
             path_to_file = self.plots_dir.absolute() / f"{self.model_name}__{output_name}__visualization.html"
-            for subset, col, epoch_outputs in zip(["Train", "Valid"], [1, 2], [train_epoch_outputs, valid_epoch_outputs]):
-                marker_dict = dict(colorscale='Viridis', size=3, showscale=False)
-                if 'Y' in epoch_outputs:
-                    marker_dict['color'] = epoch_outputs['Y']
+            subsets = ["Train", "Valid"]
+            cols = [1, 2]
+            epoch_outputs_lst = [train_epoch_outputs, valid_epoch_outputs]
+            for subset, col, epoch_outputs in zip(subsets, cols, epoch_outputs_lst):
                 plot_inds = torch.randperm(len(epoch_outputs[output_name]))[:self.max_plot_samples]
                 outputs = epoch_outputs[output_name][plot_inds, :].detach().cpu().numpy()
                 if outputs.shape[-1] > 2:
                     if subset == "Train":
                         self.embedding_dim_reducer.fit(outputs)
                     outputs = self.embedding_dim_reducer.transform(outputs)
-                self.figs[output_name].add_trace(go.Scatter(x=outputs[:, 0], 
+                color_labels = []
+                if 'Y' in epoch_outputs:
+                    color_labels.append('Y')
+                if 'Y_hat' in epoch_outputs:
+                    color_labels.append('Y_hat')
+                if len(color_labels) == 0:
+                    color_labels.append(None)
+                for row, color_label in enumerate(color_labels, start=1):
+                    marker_dict = dict(colorscale='Rainbow', size=3, showscale=False)
+                    colors = None
+                    labels = None
+                    if color_label is not None:
+                        colors = epoch_outputs[color_label][plot_inds]
+                        if len(colors.shape) > 1: # for logits - Y_hat
+                            colors = torch.argmax(colors, dim=1)
+                        if self.int2label_dict is None:
+                            labels = colors
+                        else:
+                            labels = [self.int2label_dict[int(c)] for c in colors]
+                    marker_dict['color'] = colors
+
+                    self.figs[output_name].add_trace(go.Scatter(x=outputs[:, 0], 
                                                             y=outputs[:, 1], 
                                                             mode='markers', marker=marker_dict,
-                                                            name=f'{subset} - Epoch {self.epoch_counter}'), row=1, col=col)
+                                                            name=f'{subset} - Epoch {self.epoch_counter}',
+                                                            hovertext=labels, hoverinfo="text"), row=row, col=col)
+
+            # Collect all axis names from the figure
+            x_axes = [ax for ax in self.figs[output_name]['layout'] if ax.startswith('xaxis')]
+            y_axes = [ax for ax in self.figs[output_name]['layout'] if ax.startswith('yaxis')]
+            # Match all x and y axes
+            for x in x_axes[1:]:  # Skip the first axis (xaxis)
+                self.figs[output_name].update_layout({x: dict(matches='x')})
+            for y in y_axes[1:]:  # Skip the first axis (yaxis)
+                self.figs[output_name].update_layout({y: dict(matches='y')})
             self.figs[output_name].write_html(path_to_file, auto_open=False)
-            self.figs[output_name].update_xaxes(showgrid=False, showline=False, zeroline=False)
-            self.figs[output_name].update_yaxes(showgrid=False, showline=False, zeroline=False)
             if self.save_all_output_plots:
                 path_to_file_ii = self.plots_dir.absolute() / f"{self.epoch_counter}__{self.model_name}__{output_name}__visualization.html"
                 self.figs[output_name].write_html(path_to_file_ii, auto_open=False)
