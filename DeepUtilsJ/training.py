@@ -118,11 +118,11 @@ class Trainer():
                 self.embedding_dim_reducer = PCA(n_components=2)
             for output_name in self.plot_output_names:
                 if ('Y' in self.epoch_output_names) and ('Y_hat' in self.epoch_output_names):
-                    self.figs[output_name] = make_subplots(rows=2, cols=2,
+                    self.figs[output_name] = make_subplots(rows=2, cols=2, horizontal_spacing=0.02, vertical_spacing=0.02, shared_xaxes=True, shared_yaxes=True,
                                                            subplot_titles=(f"Train: GT colored - {output_name}",   f"Valid: GT colored -   {output_name}",
                                                                            f"Train: Pred colored - {output_name}", f"Valid: Pred colored - {output_name}"))
                 else:
-                    self.figs[output_name] = make_subplots(rows=1, cols=2,
+                    self.figs[output_name] = make_subplots(rows=1, cols=2, horizontal_spacing=0.02, vertical_spacing=0.02, shared_xaxes=True, shared_yaxes=True,
                                                            subplot_titles=(f"Train - {output_name}", f"Valid - {output_name}"))
         # Epochs:
         self.epoch_counter = 0
