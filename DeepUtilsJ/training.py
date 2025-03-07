@@ -10,6 +10,7 @@ import random
 from .utils import validate_dir
 from torchinfo import summary
 from sklearn.decomposition import PCA
+import inspect
 
 class RiskOverwriteException(Exception):
     def __init__(self, message):            
@@ -94,7 +95,7 @@ class Trainer():
             valid_loss = np.full(n_epochs, np.nan)
             valid_metric = np.full(n_epochs, np.nan)
             best_metric = -float('inf')
-            for file in self.extra_files_to_save + [self.get_caller_script()]:
+            for file in (self.extra_files_to_save + self.get_files_backup()):
                 self.backup_file(file)
         elif try_resume:
             try: 
@@ -146,22 +147,23 @@ class Trainer():
                 self.checkpoints.append(epoch_i)
                 best_metric = valid_metric[epoch_i]
                 self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.checkpoint_path)
-                if self.plot_output_names is not None:
-                    self.plot_outputs(train_epoch_outputs, valid_epoch_outputs)
             else:
                 self.checkpoint_flag = False
             # Print  
             self.epoch_print(epoch_i, start_epoch + n_epochs, epoch_time, train_loss[epoch_i], train_metric[epoch_i], valid_loss[epoch_i], valid_metric[epoch_i])
             if self.plot_training_curve:
                 self.plot_training(train_loss, train_metric, valid_loss, valid_metric)
+            if self.plot_output_names is not None:
+                self.plot_outputs(train_epoch_outputs, valid_epoch_outputs)
             # Save last epoch everythime for future training
             self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.last_epoch_path)
         # Reloading and returning the model  
         _, _, training_curves = self.load_checkpoint(path=self.checkpoint_path)
         return self.model
     
-    def get_caller_script(self):
+    def get_files_backup(self):
         import inspect
+        # caller file
         stack = inspect.stack()
         files = []
         bad_strs = [".vscode", "pdb", "bdb", "runpy"]
@@ -176,7 +178,11 @@ class Trainer():
                 bad_file = True
             if not bad_file:
                 files.append(f)
-        return files[-1]
+        caller_file = files[-1]
+        # model file
+        model_cls = self.model.__class__
+        model_file = inspect.getfile(model_cls)
+        return [caller_file, model_file]
 
     def backup_file(self, file):
         import shutil
