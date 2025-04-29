@@ -5,6 +5,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 # from torch.utils.tensorboard import SummaryWriter
 import plotly.graph_objects as go
+import plotly.express as px
 from plotly.subplots import make_subplots
 import random
 from .utils import validate_dir
@@ -115,6 +116,8 @@ class Trainer():
             self.figs['loss'] = go.Figure()
             self.figs['metric'] = go.Figure()
         if self.plot_output_names is not None:
+            from plotly.express.colors import qualitative as col_sets
+            self.color_dict = {ii: c for ii, c in enumerate(col_sets.Bold + col_sets.Vivid + col_sets.D3 + col_sets.Plotly)}
             if self.embedding_dim_reducer is None:
                 self.embedding_dim_reducer = PCA(n_components=2)
             for output_name in self.plot_output_names:
@@ -263,7 +266,7 @@ class Trainer():
                 with torch.no_grad():
                     model_outputs = self.model(*map(loader_outputs.get, self.model_input_names))
                     model_outputs = self.outputs_dict_converter(model_outputs, self.model_output_names)
-                    combined_outputs = loader_outputs | model_outputs
+                    combined_outputs = loader_outputs | moself.color_dictdel_outputs
                     loss = self.loss_func(*map(combined_outputs.get, self.loss_input_names))
                     if self.epoch_output_names is not None:
                         for key in self.epoch_output_names:
@@ -347,7 +350,7 @@ class Trainer():
                 if len(color_labels) == 0:
                     color_labels.append(None)
                 for row, color_label in enumerate(color_labels, start=1):
-                    marker_dict = dict(colorscale='Rainbow', size=3, showscale=False)
+                    marker_dict = dict(size=3, showscale=False)
                     colors = None
                     labels = None
                     if color_label is not None:
@@ -358,7 +361,7 @@ class Trainer():
                             labels = colors
                         else:
                             labels = [self.int2label_dict[int(c)] for c in colors]
-                    marker_dict['color'] = colors
+                    marker_dict['color'] = [self.color_dict[int(c)] for c in colors]
 
                     self.figs[output_name].add_trace(go.Scatter(x=outputs[:, 0], 
                                                             y=outputs[:, 1], 
