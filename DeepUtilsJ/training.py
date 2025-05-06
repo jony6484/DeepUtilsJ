@@ -268,7 +268,7 @@ class Trainer():
                 with torch.no_grad():
                     model_outputs = self.model(*map(loader_outputs.get, self.model_input_names))
                     model_outputs = self.outputs_dict_converter(model_outputs, self.model_output_names)
-                    combined_outputs = loader_outputs | moself.color_dictdel_outputs
+                    combined_outputs = loader_outputs | model_outputs
                     loss = self.loss_func(*map(combined_outputs.get, self.loss_input_names))
                     if self.epoch_output_names is not None:
                         for key in self.epoch_output_names:
