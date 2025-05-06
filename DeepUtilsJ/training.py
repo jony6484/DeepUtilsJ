@@ -342,7 +342,7 @@ class Trainer():
                 outputs = epoch_outputs[output_name][plot_inds, :].detach().cpu().numpy()
                 N = len(plot_inds)
                 if self.stateful_flag:
-                    time_inds = torch.randperm(0, outputs.shape[1], (N, ))
+                    time_inds = torch.randint(0, outputs.shape[1], (N, ))
                     outputs = outputs[torch.arange(N), time_inds]
                 if outputs.shape[-1] > 2:
                     if subset == "Train":
