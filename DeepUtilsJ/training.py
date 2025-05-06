@@ -34,7 +34,8 @@ class Trainer():
                  extra_files_to_save = None,
                  max_plot_samples=3000,
                  embedding_dim_reducer = None,
-                 int2label_dict = None
+                 int2label_dict = None,
+                 stateful_flag = False
                  ):
         self.init_params = dict(
                  model_dir=model_dir,
@@ -76,6 +77,7 @@ class Trainer():
             self.extra_files_to_save = [extra_files_to_save]
         else:
             self.extra_files_to_save = []
+        self.stateful_flag = stateful_flag
     
     def print_model_summary(self, loader):
         indx = np.random.randint(len(loader.dataset))
@@ -338,6 +340,10 @@ class Trainer():
             for subset, col, epoch_outputs in zip(subsets, cols, epoch_outputs_lst):
                 plot_inds = torch.randperm(len(epoch_outputs[output_name]))[:self.max_plot_samples]
                 outputs = epoch_outputs[output_name][plot_inds, :].detach().cpu().numpy()
+                N = len(plot_inds)
+                if self.stateful_flag:
+                    time_inds = torch.randperm(0, outputs.shape[1], (N, ))
+                    outputs = outputs[torch.arange(N), time_inds]
                 if outputs.shape[-1] > 2:
                     if subset == "Train":
                         self.embedding_dim_reducer.fit(outputs)
@@ -355,6 +361,8 @@ class Trainer():
                     labels = None
                     if color_label is not None:
                         colors = epoch_outputs[color_label][plot_inds]
+                        if self.stateful_flag:
+                            colors = colors[torch.arange(N), time_inds]
                         if len(colors.shape) > 1: # for logits - Y_hat
                             colors = torch.argmax(colors, dim=1)
                         if self.int2label_dict is None:
