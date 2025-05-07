@@ -100,6 +100,8 @@ class Trainer():
             best_metric = -float('inf')
             for file in (self.extra_files_to_save + self.get_files_backup()):
                 self.backup_file(file)
+            # save model object for structure
+            torch.save(self.model, self.model_dir / "model.pt")
         elif try_resume:
             try: 
                 # load last epoch
