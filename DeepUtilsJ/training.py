@@ -167,6 +167,8 @@ class Trainer():
             self.save_checkpoint(epoch_i=epoch_i, best_metric=best_metric, training_curves=training_curves, path=self.last_epoch_path)
         # Reloading and returning the model  
         _, _, training_curves = self.load_checkpoint(path=self.checkpoint_path)
+        # Additional weights save for simple loading
+        torch.save(self.model.state_dict(), self.model_dir / "weights.pt")
         return self.model
     
     def get_files_backup(self):
