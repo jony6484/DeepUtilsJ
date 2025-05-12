@@ -56,5 +56,16 @@ max_plot_samples: defaults to 3000, specifeis how many scatter points to plot in
 
 int2label_dict: if specified, is used to name the outputs via hoveron, must be a dict.
 
+# Loading the trained model:
+```python
+import torch
+
+model_train_path = "...\some\path"
+model_path model_train_path / "model.pt"
+model = torch.jit.load("model_path")
+checkpoint = torch.load(model_train_path / "checkpoint.pt")
+model.load_state_dict(state_dict['state_dict'])
+```
+
 # Bulid
 python setup.py bdist_wheel
