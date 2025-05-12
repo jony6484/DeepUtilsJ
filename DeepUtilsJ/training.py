@@ -101,7 +101,8 @@ class Trainer():
             for file in (self.extra_files_to_save + self.get_files_backup()):
                 self.backup_file(file)
             # save model object for structure
-            torch.save(self.model, self.model_dir / "model.pt")
+            serial_model = torch.jit.script(self.model)
+            serial_model.save(self.model_dir / "model.pt")
         elif try_resume:
             try: 
                 # load last epoch
@@ -121,7 +122,7 @@ class Trainer():
             self.figs['metric'] = go.Figure()
         if self.plot_output_names is not None:
             from plotly.express.colors import qualitative as col_sets
-            self.color_dict = {ii: c for ii, c in enumerate(col_sets.Bold + col_sets.Vivid + col_sets.D3 + col_sets.Plotly)}
+            self.color_dict = {ii: c for ii, c in enumerate(col_sets.Plotly + col_sets.Bold + col_sets.Vivid + col_sets.D3)}
             if self.embedding_dim_reducer is None:
                 self.embedding_dim_reducer = PCA(n_components=2)
             for output_name in self.plot_output_names:
