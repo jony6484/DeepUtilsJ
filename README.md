@@ -63,8 +63,8 @@ import torch
 model_train_path = "...\some\path"
 model_path model_train_path / "model.pt"
 model = torch.jit.load("model_path")
-checkpoint = torch.load(model_train_path / "checkpoint.pt")
-model.load_state_dict(state_dict['state_dict'])
+weights = torch.load(model_train_path / "weights.pt")
+model.load_state_dict(weights)
 ```
 
 # Bulid
