@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-VERSION = '0.14.0'
+VERSION = '0.15.0'
 DESCRIPTION = 'Deep learning utils'
 setup(
     name='DeepUtilsJ',

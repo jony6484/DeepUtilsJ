@@ -62,7 +62,11 @@ import torch
 
 model_train_path = "...\some\path"
 model_path model_train_path / "model.pt"
+# JIT:
 model = torch.jit.load("model_path")
+# DILL:
+with open(model_path,'rb') as file:
+    model = dill.load(file)
 weights = torch.load(model_train_path / "weights.pt")
 model.load_state_dict(weights)
 ```

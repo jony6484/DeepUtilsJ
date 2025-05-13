@@ -12,6 +12,7 @@ from .utils import validate_dir
 from torchinfo import summary
 from sklearn.decomposition import PCA
 import inspect
+import dill
 
 class RiskOverwriteException(Exception):
     def __init__(self, message):            
@@ -35,7 +36,8 @@ class Trainer():
                  max_plot_samples=3000,
                  embedding_dim_reducer = None,
                  int2label_dict = None,
-                 stateful_flag = False
+                 stateful_flag = False,
+                 model_serialization = 'dill'
                  ):
         self.init_params = dict(
                  model_dir=model_dir,
@@ -78,6 +80,7 @@ class Trainer():
         else:
             self.extra_files_to_save = []
         self.stateful_flag = stateful_flag
+        self.model_serialization = model_serialization
     
     def print_model_summary(self, loader):
         indx = np.random.randint(len(loader.dataset))
@@ -85,6 +88,16 @@ class Trainer():
         model_sum = summary(self.model, dummy_shape, batch_dim=0)
         with (self.model_dir / "model_summary.txt").open('a', encoding="utf-8") as file:
             file.write(str(model_sum))
+
+    def save_model(self, model_serialization):
+        if model_serialization == 'jit':
+            serial_model = torch.jit.script(self.model)
+            serial_model.save(self.model_dir / "model.pt")
+        elif model_serialization == 'dill':
+            with (self.model_dir / "model.pt").open('wb') as file:
+                dill.dump(self.model)
+        else:
+            torch.save(self.model, self.model_dir / "model.pt")
 
     def train(self, train_loader, valid_loader, n_epochs=2, try_resume=True):
         # print model summary:
@@ -101,8 +114,7 @@ class Trainer():
             for file in (self.extra_files_to_save + self.get_files_backup()):
                 self.backup_file(file)
             # save model object for structure
-            serial_model = torch.jit.script(self.model)
-            serial_model.save(self.model_dir / "model.pt")
+            self.save_model(self.model_serialization)         
         elif try_resume:
             try: 
                 # load last epoch
