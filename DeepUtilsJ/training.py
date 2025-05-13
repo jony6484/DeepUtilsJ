@@ -95,7 +95,7 @@ class Trainer():
             serial_model.save(self.model_dir / "model.pt")
         elif model_serialization == 'dill':
             with (self.model_dir / "model.pt").open('wb') as file:
-                dill.dump(self.model)
+                dill.dump(self.model, file)
         else:
             torch.save(self.model, self.model_dir / "model.pt")
 
