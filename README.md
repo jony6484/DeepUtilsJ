@@ -82,11 +82,9 @@ If just a specific object is required without running over something, use import
 assign required_module = temp_module.required_module
 if you use this due to pickle loadig missing attribute, make sure to assign the attribute to the correct
 module name ea: for error such "Can't get attribute 'Model123' on module 'deep_models'"
-do the following assignment: 
+do the following (Moel123 will be imported to a module with th e file name, added if it already exists): 
 ```python
-import sys
-module = module_file_loader("...\some\path\to_file.py", module_name="temp_module", import_module=False)
-sys.modules['deep_models'] = temp_module.Model123
+import_attribute_from_file("...\some\path\to_file.py", attribute_name='Model123')
 ```
 # Bulid
 python setup.py bdist_wheel
