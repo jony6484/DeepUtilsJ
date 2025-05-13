@@ -71,5 +71,22 @@ weights = torch.load(model_train_path / "weights.pt")
 model.load_state_dict(weights)
 ```
 
+# Loading a module from a file:
+```python
+from DeepUtilsJ.utils import module_file_loader
+module = module_file_loader("...\some\path\to_file.py", module_name="temp_module", import_module=True)
+```
+This will load and import the module content from the file so module.SOME_CLASS or FUNCTION etc is reachable
+Also because import is true, it can be reached thru temp_module.SOME_CLASS or FUNCTION
+If just a specific object is required without running over something, use import_module=False and manualy 
+assign required_module = temp_module.required_module
+if you use this due to pickle loadig missing attribute, make sure to assign the attribute to the correct
+module name ea: for error such "Can't get attribute 'Model123' on module 'deep_models'"
+do the following assignment: 
+```python
+import sys
+module = module_file_loader("...\some\path\to_file.py", module_name="temp_module", import_module=False)
+sys.modules['deep_models'] = temp_module.Model123
+```
 # Bulid
 python setup.py bdist_wheel

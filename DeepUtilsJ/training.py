@@ -90,14 +90,14 @@ class Trainer():
             file.write(str(model_sum))
 
     def save_model(self, model_serialization):
-        if model_serialization == 'jit':
-            serial_model = torch.jit.script(self.model)
-            serial_model.save(self.model_dir / "model.pt")
-        elif model_serialization == 'dill':
+        if model_serialization == 'dill':
             with (self.model_dir / "model.pt").open('wb') as file:
                 dill.dump(self.model, file)
         else:
             torch.save(self.model, self.model_dir / "model.pt")
+        # Save Serialized version aswell
+        serial_model = torch.jit.script(self.model)
+        serial_model.save(self.model_dir / "model_jit.pt")
 
     def train(self, train_loader, valid_loader, n_epochs=2, try_resume=True):
         # print model summary:

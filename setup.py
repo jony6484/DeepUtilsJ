@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-VERSION = '0.15.0'
+VERSION = '0.16.0'
 DESCRIPTION = 'Deep learning utils'
 setup(
     name='DeepUtilsJ',
@@ -15,5 +15,6 @@ setup(
         'scikit-learn',
         'plotly',
         'torchinfo'
+        'dill'
     ],
 )
