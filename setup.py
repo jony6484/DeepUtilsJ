@@ -14,7 +14,7 @@ setup(
         'numpy',
         'scikit-learn',
         'plotly',
-        'torchinfo'
+        'torchinfo',
         'dill'
     ],
 )
