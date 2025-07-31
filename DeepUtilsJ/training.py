@@ -81,6 +81,7 @@ class Trainer():
             self.extra_files_to_save = []
         self.stateful_flag = stateful_flag
         self.model_serialization = model_serialization
+        setattr(model, 'model_name', model_name)  # Add model name to the model object
     
     def print_model_summary(self, loader):
         indx = np.random.randint(len(loader.dataset))
