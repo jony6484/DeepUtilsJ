@@ -12,7 +12,6 @@ from .utils import validate_dir
 from torchinfo import summary
 from sklearn.decomposition import PCA
 import inspect
-import dill
 
 class RiskOverwriteException(Exception):
     def __init__(self, message):            
@@ -86,19 +85,26 @@ class Trainer():
     def print_model_summary(self, loader):
         indx = np.random.randint(len(loader.dataset))
         dummy_shape = loader.dataset[indx][0].shape
-        model_sum = summary(self.model, dummy_shape, batch_dim=0)
+        try:
+            model_sum = summary(self.model, dummy_shape, batch_dim=0)
+        except:
+            model_sum = "did not succeed running model summary"
         with (self.model_dir / "model_summary.txt").open('a', encoding="utf-8") as file:
             file.write(str(model_sum))
 
     def save_model(self, model_serialization):
         if model_serialization == 'dill':
+            import dill
             with (self.model_dir / "model.pt").open('wb') as file:
                 dill.dump(self.model, file)
         else:
             torch.save(self.model, self.model_dir / "model.pt")
         # Save Serialized version aswell
-        serial_model = torch.jit.script(self.model)
-        serial_model.save(self.model_dir / "model_jit.pt")
+        try:
+            serial_model = torch.jit.script(self.model)
+            serial_model.save(self.model_dir / "model_jit.pt")
+        except:
+            print("Did not save model_jit.pt")
 
     def train(self, train_loader, valid_loader, n_epochs=2, try_resume=True):
         # print model summary:
@@ -114,8 +120,6 @@ class Trainer():
             best_metric = -float('inf')
             for file in (self.extra_files_to_save + self.get_files_backup()):
                 self.backup_file(file)
-            # save model object for structure
-            self.save_model(self.model_serialization)         
         elif try_resume:
             try: 
                 # load last epoch
@@ -130,6 +134,8 @@ class Trainer():
                 return
         else:
             raise RiskOverwriteException("direcory not empty and 'try_resume=False'")
+        # save model object for structure
+        self.save_model(self.model_serialization)         
         if self.plot_training_curve:
             self.figs['loss'] = go.Figure()
             self.figs['metric'] = go.Figure()
