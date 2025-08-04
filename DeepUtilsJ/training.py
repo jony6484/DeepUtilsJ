@@ -31,12 +31,10 @@ class Trainer():
                  plot_output_names = None,
                  save_all_output_plots = False,
                  plot_training_curve = False,
-                 extra_files_to_save = None,
                  max_plot_samples=3000,
                  embedding_dim_reducer = None,
                  int2label_dict = None,
                  stateful_flag = False,
-                 model_serialization = 'dill'
                  ):
         self.init_params = dict(
                  model_dir=model_dir,
@@ -72,14 +70,7 @@ class Trainer():
         self.plots_dir = validate_dir(self.model_dir / 'plots')
         self.checkpoint_flag = None
         self.checkpoints = []
-        if isinstance(extra_files_to_save, list):
-            self.extra_files_to_save = extra_files_to_save
-        elif isinstance(extra_files_to_save, Path) or isinstance(extra_files_to_save, str):
-            self.extra_files_to_save = [extra_files_to_save]
-        else:
-            self.extra_files_to_save = []
         self.stateful_flag = stateful_flag
-        self.model_serialization = model_serialization
         setattr(model, 'model_name', model_name)  # Add model name to the model object
     
     def print_model_summary(self, loader):
@@ -92,13 +83,24 @@ class Trainer():
         with (self.model_dir / "model_summary.txt").open('a', encoding="utf-8") as file:
             file.write(str(model_sum))
 
-    def save_model(self, model_serialization):
-        if model_serialization == 'dill':
-            import dill
-            with (self.model_dir / "model.pt").open('wb') as file:
-                dill.dump(self.model, file)
-        else:
-            torch.save(self.model, self.model_dir / "model.pt")
+    def save_model_and_scripts(self):
+        import shutil
+        import yaml
+        module_name = self.model.__module__
+        metadata = {'module_name': module_name, 'class_name': self.model.__class__.__name__}
+        with (self.scripts_dir / "metadata.yaml").open('w') as file:
+            yaml.dump(metadata, file)
+        module_parts = module_name.split(".")
+        caller_file, model_file = self.get_files_backup()
+        self.scripts_dir.joinpath(*module_parts[:-1]).mkdir(parents=True, exist_ok=True)
+        path = self.scripts_dir
+        for part in module_parts[:-1]:
+            path = path / part
+            (path / "__init__.py").touch()
+        model_path = path / (module_parts[-1] + ".py")
+        shutil.copy(Path(caller_file), self.scripts_dir / Path(caller_file).name)
+        shutil.copy(Path(model_file), model_path)
+        torch.save(self.model, self.model_dir / "model.pt")
         # Save Serialized version aswell
         try:
             serial_model = torch.jit.script(self.model)
@@ -118,8 +120,6 @@ class Trainer():
             valid_loss = np.full(n_epochs, np.nan)
             valid_metric = np.full(n_epochs, np.nan)
             best_metric = -float('inf')
-            for file in (self.extra_files_to_save + self.get_files_backup()):
-                self.backup_file(file)
         elif try_resume:
             try: 
                 # load last epoch
@@ -135,7 +135,7 @@ class Trainer():
         else:
             raise RiskOverwriteException("direcory not empty and 'try_resume=False'")
         # save model object for structure
-        self.save_model(self.model_serialization)         
+        self.save_model_and_scripts()         
         if self.plot_training_curve:
             self.figs['loss'] = go.Figure()
             self.figs['metric'] = go.Figure()
@@ -212,10 +212,6 @@ class Trainer():
         model_cls = self.model.__class__
         model_file = inspect.getfile(model_cls)
         return [caller_file, model_file]
-
-    def backup_file(self, file):
-        import shutil
-        shutil.copy(Path(file), self.scripts_dir / Path(file).name)
 
     def save_checkpoint(self, epoch_i, best_metric, training_curves, path):
         checkpoint = {
