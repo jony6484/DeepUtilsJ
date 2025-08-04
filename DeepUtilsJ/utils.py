@@ -23,7 +23,7 @@ class ModelLoader:
         self.load_model_meta()
 
     def load_model_meta(self):
-        with (self.base_path / "metadata.yaml").open('r') as file:
+        with (self.scripts_path / "metadata.yaml").open('r') as file:
             self.metadata = yaml.safe_load(file)
 
     def load_model(self):
