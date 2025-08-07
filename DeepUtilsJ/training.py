@@ -11,7 +11,8 @@ import random
 from .utils import validate_dir
 from torchinfo import summary
 from sklearn.decomposition import PCA
-import inspect
+from utils import ModelScriptBackup
+
 
 class RiskOverwriteException(Exception):
     def __init__(self, message):            
@@ -35,6 +36,7 @@ class Trainer():
                  embedding_dim_reducer = None,
                  int2label_dict = None,
                  stateful_flag = False,
+                 project_root=None,
                  ):
         self.init_params = dict(
                  model_dir=model_dir,
@@ -70,7 +72,8 @@ class Trainer():
         self.plots_dir = validate_dir(self.model_dir / 'plots')
         self.checkpoint_flag = None
         self.checkpoints = []
-        self.stateful_flag = stateful_flag
+        self.stateful_flag = stateful_flag,
+        self.project_root_dir = project_root_dir
         setattr(model, 'model_name', model_name)  # Add model name to the model object
     
     def print_model_summary(self, loader):
@@ -86,20 +89,17 @@ class Trainer():
     def save_model_and_scripts(self):
         import shutil
         import yaml
+        # metadata
         module_name = self.model.__module__
         metadata = {'module_name': module_name, 'class_name': self.model.__class__.__name__}
         with (self.scripts_dir / "metadata.yaml").open('w') as file:
             yaml.dump(metadata, file)
-        module_parts = module_name.split(".")
+        # model scripts
+        model_script_backup = ModelScriptBackup(backup_dir=self.scripts_dir, project_root=self.project_root_dir)
+        model_script_backup.backup_modules(self.model)
         caller_file, model_file = self.get_files_backup()
-        self.scripts_dir.joinpath(*module_parts[:-1]).mkdir(parents=True, exist_ok=True)
-        path = self.scripts_dir
-        for part in module_parts[:-1]:
-            path = path / part
-            (path / "__init__.py").touch()
-        model_path = path / (module_parts[-1] + ".py")
         shutil.copy(Path(caller_file), self.scripts_dir / Path(caller_file).name)
-        shutil.copy(Path(model_file), model_path)
+        # model object
         torch.save(self.model, self.model_dir / "model.pt")
         # Save Serialized version aswell
         try:
