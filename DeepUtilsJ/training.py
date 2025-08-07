@@ -8,10 +8,9 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import random
-from .utils import validate_dir
+from .utils import validate_dir, ModelScriptBackup
 from torchinfo import summary
 from sklearn.decomposition import PCA
-from utils import ModelScriptBackup
 
 
 class RiskOverwriteException(Exception):
