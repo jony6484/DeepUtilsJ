@@ -73,18 +73,9 @@ model.load_state_dict(weights)
 
 # Loading a module from a file:
 ```python
-from DeepUtilsJ.utils import module_file_loader
-module = module_file_loader("...\some\path\to_file.py", module_name="temp_module", import_module=True)
-```
-This will load and import the module content from the file so module.SOME_CLASS or FUNCTION etc is reachable
-Also because import is true, it can be reached thru temp_module.SOME_CLASS or FUNCTION
-If just a specific object is required without running over something, use import_module=False and manualy 
-assign required_module = temp_module.required_module
-if you use this due to pickle loadig missing attribute, make sure to assign the attribute to the correct
-module name ea: for error such "Can't get attribute 'Model123' on module 'deep_models'"
-do the following (Moel123 will be imported to a module with th e file name, added if it already exists): 
-```python
-import_attribute_from_file("...\some\path\to_file.py", attribute_name='Model123')
+from DeepUtilsJ.utils import ModelLoader
+model_loader = ModelLoader(base_path="path/to/where/training/is/saved")
+model = model_loader.load_model_and_weights(last_epoch=False)
 ```
 # Bulid
 python setup.py bdist_wheel

@@ -36,7 +36,7 @@ class Trainer():
                  embedding_dim_reducer = None,
                  int2label_dict = None,
                  stateful_flag = False,
-                 project_root=None,
+                 model_src_root=None,
                  ):
         self.init_params = dict(
                  model_dir=model_dir,
@@ -73,7 +73,7 @@ class Trainer():
         self.checkpoint_flag = None
         self.checkpoints = []
         self.stateful_flag = stateful_flag,
-        self.project_root_dir = project_root_dir
+        self.model_src_root = model_src_root
         setattr(model, 'model_name', model_name)  # Add model name to the model object
     
     def print_model_summary(self, loader):
@@ -95,10 +95,11 @@ class Trainer():
         with (self.scripts_dir / "metadata.yaml").open('w') as file:
             yaml.dump(metadata, file)
         # model scripts
-        model_script_backup = ModelScriptBackup(backup_dir=self.scripts_dir, project_root=self.project_root_dir)
+        model_script_backup = ModelScriptBackup(backup_dir=validate_dir(self.scripts_dir / "model_root"), project_root=self.model_src_root)
         model_script_backup.backup_modules(self.model)
         caller_file, model_file = self.get_files_backup()
         shutil.copy(Path(caller_file), self.scripts_dir / Path(caller_file).name)
+        shutil.copy(Path(model_file), self.scripts_dir / f"{Path(model_file).stem}_extra_backup.py")
         # model object
         torch.save(self.model, self.model_dir / "model.pt")
         # Save Serialized version aswell

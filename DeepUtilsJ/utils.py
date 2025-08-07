@@ -46,6 +46,11 @@ class ModelLoader:
         self.model.load_state_dict(checkpoint['model_state'])
         print(f"Model weights loaded from {self.base_path / checkpoint_file}")
 
+    def load_model_and_weights(self, last_epoch=False):
+        self.load_model()
+        self.load_weights(last_epoch)
+        return self.model
+
 
 class ModelScriptBackup:
     def __init__(self, backup_dir, project_root):
