@@ -32,11 +32,11 @@ class ModelLoader:
             self.metadata = yaml.safe_load(file)
 
     def load_model(self):
-        sys.path.insert(0, str(self.scripts_path))
+        sys.path.insert(0, str(self.scripts_path / "model_root"))
         module_name = self.metadata['module_name']
         importlib.import_module(module_name)
         self.model = torch.load(self.base_path / "model.pt", weights_only=False)
-        sys.path.remove(str(self.scripts_path))
+        sys.path.remove(str(self.scripts_path / "model_root"))
 
     def load_weights(self, last_epoch=False):
         checkpoint_file = "checkpoint.pt"
